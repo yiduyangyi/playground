@@ -10,8 +10,9 @@ import jieba
 import numpy as np
 import pandas as pd
 from bertopic import BERTopic
-from sentence_transformers import SentenceTransformer
 from sklearn.feature_extraction.text import CountVectorizer
+
+from .embedder import BaseEmbedder, get_embedder
 
 
 class ChineseBERTopicModel:
@@ -19,29 +20,67 @@ class ChineseBERTopicModel:
 
     def __init__(
         self,
-        embedding_model: str = "paraphrase-multilingual-MiniLM-L12-v2",
+        embedding_model: str | None = None,
+        embedder: BaseEmbedder | None = None,
+        embedder_type: str = "sentence-transformer",
         vectorizer_kwargs: dict[str, Any] | None = None,
         topic_model_kwargs: dict[str, Any] | None = None,
         jieba_user_dict: str | None = None,
         jieba_stop_words: list[str] | None = None,
+        **embedder_kwargs: Any,
     ):
         """Initialize Chinese BERTopic model.
 
         Args:
-            embedding_model: Sentence transformer model name for embeddings
+            embedding_model: Model name for embeddings (deprecated, use embedder_type)
+            embedder: Custom embedder instance (overrides embedder_type)
+            embedder_type: Type of embedder ('sentence-transformer' or 'ollama')
             vectorizer_kwargs: Additional arguments for CountVectorizer
             topic_model_kwargs: Additional arguments for BERTopic
             jieba_user_dict: Path to custom Jieba user dictionary
             jieba_stop_words: List of Chinese stop words
+            **embedder_kwargs: Additional arguments for embedder (e.g., base_url for ollama)
+
+        Examples:
+            # Using SentenceTransformer (default)
+            model = ChineseBERTopicModel()
+
+            # Using Ollama with bge-m3
+            model = ChineseBERTopicModel(embedder_type='ollama')
+
+            # Using Ollama with custom URL
+            model = ChineseBERTopicModel(
+                embedder_type='ollama',
+                model_name='bge-m3',
+                base_url='http://localhost:11434'
+            )
+
+            # Using custom embedder
+            from query_clustering.embedder import SentenceTransformerEmbedder
+            custom_embedder = SentenceTransformerEmbedder('your-model')
+            model = ChineseBERTopicModel(embedder=custom_embedder)
         """
-        self.embedding_model = embedding_model
+        self.embedder_type = embedder_type
         self.vectorizer_kwargs = vectorizer_kwargs or {}
         self.topic_model_kwargs = topic_model_kwargs or {}
         self.jieba_user_dict = jieba_user_dict
         self.jieba_stop_words = jieba_stop_words or []
 
-        # Initialize components
-        self.sentence_model = SentenceTransformer(embedding_model)
+        # Initialize embedder
+        if embedder is not None:
+            self.embedder = embedder
+        else:
+            # Use embedding_model for backward compatibility
+            model_name = embedding_model
+            if model_name is None and embedder_type == "sentence-transformer":
+                model_name = "paraphrase-multilingual-MiniLM-L12-v2"
+            
+            self.embedder = get_embedder(
+                embedder_type=embedder_type,
+                model_name=model_name,
+                **embedder_kwargs,
+            )
+
         self.vectorizer = self._create_vectorizer()
         self.topic_model = None
 
@@ -155,8 +194,8 @@ class ChineseBERTopicModel:
 
         # Use provided embeddings or compute them
         if embeddings is None:
-            embeddings = self.sentence_model.encode(
-                processed_docs, show_progress_bar=True, convert_to_numpy=True
+            embeddings = self.embedder.encode(
+                processed_docs, show_progress_bar=True
             )
 
         # Combine topic model kwargs
@@ -164,7 +203,6 @@ class ChineseBERTopicModel:
 
         # Create and fit BERTopic model
         self.topic_model = BERTopic(
-            embedding_model=self.sentence_model,
             vectorizer_model=self.vectorizer,
             **final_kwargs,
         )

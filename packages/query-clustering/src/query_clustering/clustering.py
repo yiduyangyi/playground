@@ -1,13 +1,9 @@
-"""Chinese Query Clustering module.
-
-Main module for Chinese query clustering analysis using BERTopic.
-"""
-
 from typing import Any
 
 import numpy as np
 import pandas as pd
 
+from .embedder import BaseEmbedder
 from .models import ChineseBERTopicModel
 
 
@@ -16,27 +12,50 @@ class ChineseQueryClustering:
 
     def __init__(
         self,
-        embedding_model: str = "paraphrase-multilingual-MiniLM-L12-v2",
+        embedding_model: str | None = None,
+        embedder: BaseEmbedder | None = None,
+        embedder_type: str = "sentence-transformer",
         vectorizer_kwargs: dict[str, Any] | None = None,
         topic_model_kwargs: dict[str, Any] | None = None,
         jieba_user_dict: str | None = None,
         jieba_stop_words: list[str] | None = None,
+        **embedder_kwargs: Any,
     ):
         """Initialize Chinese Query Clustering.
 
         Args:
-            embedding_model: Sentence transformer model name
+            embedding_model: Model name for embeddings (deprecated, use embedder_type)
+            embedder: Custom embedder instance (overrides embedder_type)
+            embedder_type: Type of embedder ('sentence-transformer' or 'ollama')
             vectorizer_kwargs: Additional arguments for CountVectorizer
             topic_model_kwargs: Additional arguments for BERTopic
             jieba_user_dict: Path to custom Jieba user dictionary
             jieba_stop_words: List of Chinese stop words
+            **embedder_kwargs: Additional arguments for embedder
+
+        Examples:
+            # Using default SentenceTransformer
+            clustering = ChineseQueryClustering()
+
+            # Using Ollama with bge-m3
+            clustering = ChineseQueryClustering(embedder_type='ollama')
+
+            # Using Ollama with custom configuration
+            clustering = ChineseQueryClustering(
+                embedder_type='ollama',
+                model_name='bge-m3',
+                base_url='http://192.168.1.100:11434'
+            )
         """
         self.model = ChineseBERTopicModel(
             embedding_model=embedding_model,
+            embedder=embedder,
+            embedder_type=embedder_type,
             vectorizer_kwargs=vectorizer_kwargs,
             topic_model_kwargs=topic_model_kwargs,
             jieba_user_dict=jieba_user_dict,
             jieba_stop_words=jieba_stop_words,
+            **embedder_kwargs,
         )
         self.documents = []
         self.topics = None

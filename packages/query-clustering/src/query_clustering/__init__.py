@@ -9,6 +9,15 @@ __author__ = "Your Name"
 __email__ = "your.email@example.com"
 
 from .clustering import ChineseQueryClustering
+from .embedder import BaseEmbedder, OllamaEmbedder, SentenceTransformerEmbedder, get_embedder
 from .models import ChineseBERTopicModel
 
-__all__ = ["ChineseQueryClustering", "ChineseBERTopicModel"]
+__all__ = [
+    "ChineseQueryClustering",
+    "ChineseBERTopicModel",
+    "BaseEmbedder",
+    "SentenceTransformerEmbedder",
+    "OllamaEmbedder",
+    "get_embedder",
+]
+
