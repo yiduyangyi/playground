@@ -74,7 +74,7 @@ class ChineseBERTopicModel:
             model_name = embedding_model
             if model_name is None and embedder_type == "sentence-transformer":
                 model_name = "paraphrase-multilingual-MiniLM-L12-v2"
-            
+
             self.embedder = get_embedder(
                 embedder_type=embedder_type,
                 model_name=model_name,

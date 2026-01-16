@@ -104,7 +104,7 @@ class OllamaEmbedder(BaseEmbedder):
             response = self.client.embed(
                 model=self.model_name, input=text, **kwargs
             )
-            
+
             # Ollama returns embeddings as a list in the response
             embedding = np.array(response["embeddings"][0])
 

@@ -70,25 +70,25 @@ try:
         embedder_type='ollama',
         vectorizer_kwargs={'min_df': 1, 'max_df': 0.9}
     )
-    
+
     clustering.fit(documents)
-    
+
     print("✓ Clustering completed successfully!")
-    
+
     print("\n📊 Topic Information:")
     topic_info = clustering.get_topic_info()
     print(topic_info.to_string() if len(topic_info) > 0 else "No topics found")
-    
+
     print("\n📝 Topics:")
     topics = clustering.get_topics()
     for topic_id, words in list(topics.items())[:5]:  # Show first 5 topics
         if topic_id != -1:  # Skip outliers
             print(f"  Topic {topic_id}: {[w[0] for w in words[:5]]}")
-    
+
     if -1 in topics:
         outlier_count = sum(1 for t in clustering.topics if t == -1)
         print(f"  Outliers: {outlier_count} documents")
-        
+
 except Exception as e:
     print(f"⚠ Clustering error: {type(e).__name__}: {e}")
     print("\nNote: For smaller datasets, BERTopic may need parameter tuning.")
