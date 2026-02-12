@@ -57,8 +57,6 @@ root_agent = Agent(
     name="weather_time_agent",
     model=LiteLlm(  # 适配 DeepSeek LLM
         model="deepseek/deepseek-chat",  # 注意：模型名称应该是：provider + / + model_name
-        # base_url="...",
-        api_key="sk-510f7ee065354eaba5d9a647376db70e",
     ),
     description=(
         "Agent to answer questions about the time and weather in a city."
