@@ -8,6 +8,7 @@ dependencies = [
     "renamer",
     "query-clustering",
     "deepresearch",
+    "quoraid",
 ]
 
 [tool.uv.workspace]
@@ -16,6 +17,7 @@ members = [
     "packages/renamer",
     "packages/query-clustering",
     "packages/deepresearch",
+    "packages/quoraid",
 ]
 
 [tool.uv]
@@ -35,6 +37,7 @@ fighter = { workspace = true }
 renamer = { workspace = true }
 deepresearch = { workspace = true }
 query-clustering = { workspace = true }
+quoraid = { workspace = true }
 
 [tool.ruff]
 line-length = 88
