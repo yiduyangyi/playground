@@ -1,0 +1,36 @@
+[project]
+name = "deepresearch"
+version = "0.1.0"
+description = "Deep research toolkit for data analysis and research"
+requires-python = ">=3.11"
+readme = "README.md"
+license = {text = "MIT"}
+
+dependencies = [
+    "deepagents>=0.1.0",
+    "langchain-openai>=0.0.0",
+    "tavily-python>=0.1.0",
+    "python-dotenv>=1.0.0",
+    "httpx>=0.24.0",
+]
+
+[build-system]
+requires = ["setuptools>=61.0", "setuptools-scm[toml]>=6.2"]
+build-backend = "setuptools.build_meta"
+
+[project.scripts]
+deepresearch = "deepresearch.cli:main"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.uv]
+# Package-specific dependencies can be added here if needed
+
+[tool.ruff]
+line-length = 88
+target-version = "py311"
+
+[tool.black]
+line-length = 88
+target-version = ['py311']

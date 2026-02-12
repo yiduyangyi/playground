@@ -20,6 +20,9 @@ dependencies = [
 [project.optional-dependencies]
 ollama = ["ollama>=0.1.0"]
 
+[project.scripts]
+query-clustering = "query_clustering.cli:main"
+
 [build-system]
 requires = ["setuptools>=61.0", "setuptools-scm[toml]>=6.2"]
 build-backend = "setuptools.build_meta"

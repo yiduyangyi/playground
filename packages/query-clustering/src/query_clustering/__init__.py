@@ -9,6 +9,7 @@ __author__ = "Your Name"
 __email__ = "your.email@example.com"
 
 from .clustering import ChineseQueryClustering
+from .data_loader import QueryDataLoader
 from .embedder import (
     BaseEmbedder,
     OllamaEmbedder,
@@ -20,6 +21,7 @@ from .models import ChineseBERTopicModel
 __all__ = [
     "ChineseQueryClustering",
     "ChineseBERTopicModel",
+    "QueryDataLoader",
     "BaseEmbedder",
     "SentenceTransformerEmbedder",
     "OllamaEmbedder",

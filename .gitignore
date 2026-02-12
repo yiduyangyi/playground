@@ -73,3 +73,5 @@ dmypy.json
 # Output directories
 output/
 results/
+
+.env

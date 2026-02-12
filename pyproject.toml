@@ -7,6 +7,7 @@ dependencies = [
     "fighter",
     "renamer",
     "query-clustering",
+    "deepresearch",
 ]
 
 [tool.uv.workspace]
@@ -14,6 +15,7 @@ members = [
     "packages/fighter",
     "packages/renamer",
     "packages/query-clustering",
+    "packages/deepresearch",
 ]
 
 [tool.uv]
@@ -31,6 +33,7 @@ dev-dependencies = [
 [tool.uv.sources]
 fighter = { workspace = true }
 renamer = { workspace = true }
+deepresearch = { workspace = true }
 query-clustering = { workspace = true }
 
 [tool.ruff]

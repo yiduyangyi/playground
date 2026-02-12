@@ -99,6 +99,118 @@ clustering.reduce_topics(nr_topics=5)
 topic_info = clustering.get_topic_info()
 ```
 
+### Loading Data from CSV
+
+```python
+from query_clustering import QueryDataLoader, ChineseQueryClustering
+
+# Load queries from CSV file
+loader = QueryDataLoader()
+loader.load_csv("queries.csv")
+
+# Get statistics
+stats = loader.get_statistics()
+print(f"Total queries: {stats['total_queries']}")
+print(f"Categories: {stats['categories']}")
+
+# Filter by category
+chinese_queries = loader.filter_by_language("中文")
+
+# Clustering
+clustering = ChineseQueryClustering()
+clustering.fit(chinese_queries)
+```
+
+## Command Line Interface
+
+The package includes a powerful CLI tool for batch clustering from CSV files.
+
+### Installation
+
+```bash
+# Install the package with CLI support
+uv add query-clustering
+```
+
+### Basic Usage
+
+```bash
+# Simple clustering with default settings
+query-clustering input.csv
+
+# Specify output directory
+query-clustering input.csv --output-dir ./results
+
+# Filter by language and enable verbose output
+query-clustering input.csv -o ./results --language 中文 -v
+```
+
+### Advanced CLI Options
+
+```bash
+# Cluster 1000 random Chinese queries
+query-clustering data.csv --language 中文 --sample 1000 -o ./results
+
+# Cluster by category
+query-clustering data.csv --category 旅游出行 -o ./category_results
+
+# Limit processing to first N queries
+query-clustering data.csv --limit 500 -o ./results
+
+# Use Ollama embedder for faster processing
+query-clustering data.csv --embedder-type ollama -o ./results -v
+
+# Custom minimum topic size
+query-clustering data.csv --min-topic-size 5 -o ./results
+```
+
+### CLI Help
+
+```bash
+query-clustering --help
+```
+
+### Output Files
+
+The CLI generates 4 CSV files in the output directory:
+
+1. **clustered_queries.csv** - Main clustering results
+   - `query`: The original query string
+   - `topic_id`: Assigned topic ID (-1 for noise)
+   - `topic_probability`: Confidence score for the topic assignment
+
+2. **topic_info.csv** - Detailed topic information
+   - Topic IDs, counts, and BERTopic-generated names
+
+3. **topic_summaries.csv** - Human-readable topic summaries
+   - `topic_id`: Topic identifier
+   - `keywords`: Top keywords for the topic
+   - `document_count`: Number of documents in the topic
+   - `sample_documents`: Representative sample documents
+
+4. **statistics.csv** - Dataset statistics
+   - Total queries, unique queries
+   - Number of topics found
+   - Query distribution (topics vs. noise)
+
+### Example Workflow
+
+```bash
+# 1. Prepare your CSV file with 'query' column
+# CSV format:
+# query,category,language
+# 北京天气怎么样,旅游出行,中文
+# flights to paris,travel,英文
+
+# 2. Run clustering
+query-clustering myqueries.csv --output-dir ./analysis -v
+
+# 3. Check results
+ls -lh ./analysis/
+cat ./analysis/statistics.csv
+head -20 ./analysis/clustered_queries.csv
+```
+
 ### Batch Processing
 
 ```python
