@@ -1,0 +1,138 @@
+version: '3.8'
+
+services:
+  # 数据库迁移服务（修复版 - 自动处理 CONCURRENTLY 失败）
+  prisma-migrate:
+    image: unilei/aipan-netdisk-search:latest
+    container_name: aipan-prisma-migrate
+    restart: "no"
+    environment:
+      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?schema=${DATABASE_SCHEMA}
+      - SHADOW_DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}_shadow?schema=${DATABASE_SCHEMA}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+    command: >
+      sh -c "
+        cd /app &&
+        if [ ! -f ./prisma-esm-fix.mjs ]; then
+          echo 'Creating prisma-esm-fix.mjs...' &&
+          echo \"import { fileURLToPath } from 'url'; import { dirname } from 'path'; import { createRequire } from 'module'; if (typeof global.__filename === 'undefined') { global.__filename = fileURLToPath(import.meta.url); } if (typeof global.__dirname === 'undefined') { global.__dirname = dirname(global.__filename); } if (typeof global.require === 'undefined') { global.require = createRequire(import.meta.url); } console.log('[Prisma ESM Fix] 已加载');\" > ./prisma-esm-fix.mjs;
+        fi &&
+        node --import=./prisma-esm-fix.mjs -e \"console.log('Running Prisma migrations...')\" &&
+        npx prisma migrate deploy 2>&1 ||
+        (
+          echo '===== 迁移失败，检查是否为 CONCURRENTLY 问题... =====' &&
+          if npx prisma migrate deploy 2>&1 | grep -q 'CREATE INDEX CONCURRENTLY'; then
+            echo '检测到 CONCURRENTLY 索引迁移失败，自动修复中...' &&
+            node --import=./prisma-esm-fix.mjs -e \"
+              const { execSync } = require('child_process');
+              try {
+                execSync('npx prisma migrate resolve --rolled-back 20260428000000_add_trgm_index_resource_name', { stdio: 'pipe' });
+              } catch(e) {}
+              console.log('已标记迁移为 rolled-back');
+            \" &&
+            echo '手动创建索引...' &&
+            npx ts-node -e \"
+              const { PrismaClient } = require('@prisma/client');
+              const prisma = new PrismaClient();
+              prisma.\$executeRawUnsafe('CREATE EXTENSION IF NOT EXISTS pg_trgm');
+              prisma.\$executeRawUnsafe('CREATE INDEX IF NOT EXISTS \\\"Resource_name_trgm_idx\\\" ON \\\"Resource\\\" USING GIN (\\\"name\\\" gin_trgm_ops)');
+              console.log('索引创建完成');
+              prisma.\$disconnect();
+            \" 2>/dev/null ||
+            apt-get update -qq && apt-get install -y -qq postgresql-client >/dev/null 2>&1 &&
+            PGPASSWORD=\$POSTGRES_PASSWORD psql -h postgres -U \$POSTGRES_USER -d \$POSTGRES_DB -c \"CREATE EXTENSION IF NOT EXISTS pg_trgm; CREATE INDEX IF NOT EXISTS \\\"Resource_name_trgm_idx\\\" ON \\\"Resource\\\" USING GIN (\\\"name\\\" gin_trgm_ops);\" 2>/dev/null &&
+            node --import=./prisma-esm-fix.mjs -e \"
+              const { execSync } = require('child_process');
+              execSync('npx prisma migrate resolve --applied 20260428000000_add_trgm_index_resource_name', { stdio: 'pipe' });
+              console.log('已标记迁移为 applied');
+            \" &&
+            echo '修复完成，重新执行剩余迁移...' &&
+            node --import=./prisma-esm-fix.mjs -e \"console.log('Running remaining migrations...')\" &&
+            npx prisma migrate deploy
+          else
+            echo '非 CONCURRENTLY 错误，退出'
+            exit 1
+          fi
+        )
+      "
+    depends_on:
+      - postgres
+    networks:
+      - aipan-network
+
+  # 主应用服务
+  aipan-netdisk-search:
+    image: unilei/aipan-netdisk-search:latest
+    container_name: aipan-netdisk-search-app
+    restart: always
+    ports:
+      - "${APP_PORT}:3000"
+      - "${WS_PORT}:3002"
+    environment:
+      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?schema=${DATABASE_SCHEMA}
+      - NUXT_DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?schema=${DATABASE_SCHEMA}
+      - DATABASE_SCHEMA=${DATABASE_SCHEMA}
+      - NUXT_DATABASE_SCHEMA=${DATABASE_SCHEMA}
+      - SHADOW_DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}_shadow?schema=${DATABASE_SCHEMA}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+      - ADMIN_USER=${ADMIN_USER}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD}
+      - ADMIN_EMAIL=${ADMIN_EMAIL}
+      - NUXT_ADMIN_USER=${ADMIN_USER}
+      - NUXT_ADMIN_PASSWORD=${ADMIN_PASSWORD}
+      - NUXT_ADMIN_EMAIL=${ADMIN_EMAIL}
+      - JWT_SECRET=${JWT_SECRET}
+      - NUXT_JWT_SECRET=${JWT_SECRET}
+      - NUXT_PUBLIC_GITHUB_OWNER=${NUXT_PUBLIC_GITHUB_OWNER}
+      - NUXT_PUBLIC_GITHUB_REPO=${NUXT_PUBLIC_GITHUB_REPO}
+      - NUXT_PUBLIC_GITHUB_TOKEN=${NUXT_PUBLIC_GITHUB_TOKEN}
+      - NUXT_PUBLIC_GITHUB_BRANCH=${NUXT_PUBLIC_GITHUB_BRANCH}
+      - NUXT_PUBLIC_QUARK_COOKIE=${NUXT_PUBLIC_QUARK_COOKIE}
+      - WS_PORT=${WS_PORT}
+      - REDIS_URL=${REDIS_URL}
+      - NODE_ENV=production
+    depends_on:
+      - postgres
+      - redis
+      - prisma-migrate
+    networks:
+      - aipan-network
+
+  postgres:
+    image: postgres:15-alpine
+    container_name: aipan-postgres
+    restart: always
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - aipan-network
+
+  redis:
+    image: redis:alpine
+    container_name: aipan-redis
+    restart: always
+    volumes:
+      - redis-data:/data
+    command: redis-server --appendonly yes
+    ports:
+      - "6379:6379"
+    networks:
+      - aipan-network
+
+volumes:
+  postgres-data:
+  redis-data:
+
+networks:
+  aipan-network:
+    driver: bridge

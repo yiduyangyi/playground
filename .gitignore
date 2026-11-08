@@ -81,3 +81,5 @@ results/
 !.env.sample
 !.env.template
 .adk
+outputs/
+.workbuddy/
